@@ -172,12 +172,12 @@ function WorkflowEditor() {
     <main className="flex-1 flex flex-col h-screen overflow-hidden bg-[#0A0F0C] relative">
       
       <WorkflowHeader 
-        leftOpen={leftOpen} 
+        leftOpen={leftOpen}
         setLeftOpen={setLeftOpen}
-        rightOpen={rightOpen} 
+        rightOpen={rightOpen}
         setRightOpen={setRightOpen}
         workflowName={workflowName} // Pass the fetched name here
-      />
+        workflowId={workflowId}     />
 
       {/* Floating Save Indicator */}
       <div className="absolute top-20 left-15/16 -translate-x-1/2 z-50 pointer-events-none ml-4">
