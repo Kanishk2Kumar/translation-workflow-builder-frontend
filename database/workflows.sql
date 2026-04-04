@@ -1,0 +1,11 @@
+CREATE TABLE workflows (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  agent_id UUID REFERENCES agents(id) ON DELETE CASCADE,
+
+  nodes JSONB NOT NULL,
+  edges JSONB NOT NULL,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
