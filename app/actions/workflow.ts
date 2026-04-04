@@ -3,25 +3,48 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 
+type WorkflowGraphItem = Record<string, unknown>
+
+async function getCurrentDbUserId() {
+  const supabase = createClient()
+
+  const {
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !authUser?.email) {
+    return { error: 'You must be logged in to manage workflows.' }
+  }
+
+  const { data: dbUser, error: dbUserError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', authUser.email)
+    .single()
+
+  if (dbUserError || !dbUser) {
+    return { error: 'Could not find your user profile.' }
+  }
+
+  return { userId: dbUser.id }
+}
+
+export async function getCurrentWorkflowUserId() {
+  return getCurrentDbUserId()
+}
+
 // --- NEW: Fetch existing agents for the dropdown ---
 export async function getAgents() {
   const supabase = createClient()
-  
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
 
-  const { data: dbUser } = await supabase
-    .from('users')
-    .select('id')
-    .eq('email', user.email)
-    .single()
-
-  if (!dbUser) return []
+  const currentUser = await getCurrentDbUserId()
+  if (!currentUser.userId) return []
 
   const { data } = await supabase
     .from('agents')
     .select('id, name')
-    .eq('created_by', dbUser.id)
+    .eq('created_by', currentUser.userId)
     .order('created_at', { ascending: false })
 
   return data || []
@@ -30,17 +53,9 @@ export async function getAgents() {
 // --- UPDATED: Create Workflow Logic ---
 export async function createWorkflow(formData: FormData) {
   const supabase = createClient()
-  
-  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
-  if (authError || !authUser) return { error: "You must be logged in to create a workflow." }
 
-  const { data: dbUser, error: dbUserError } = await supabase
-    .from('users')
-    .select('id')
-    .eq('email', authUser.email)
-    .single()
-
-  if (dbUserError || !dbUser) return { error: "Could not find your user profile." }
+  const currentUser = await getCurrentDbUserId()
+  if (!currentUser.userId) return { error: currentUser.error }
 
   // Extract Workflow Details
   const workflowName = formData.get('workflowName') as string
@@ -68,7 +83,7 @@ export async function createWorkflow(formData: FormData) {
         description: agentDescription, 
         auth_type: authType,
         auth_token: authType === 'bearer' ? authToken : null,
-        created_by: dbUser.id 
+        created_by: currentUser.userId 
       }])
       .select()
       .single()
@@ -83,6 +98,7 @@ export async function createWorkflow(formData: FormData) {
     .insert([{ 
         name: workflowName,
         description: workflowDescription,
+        user_id: currentUser.userId,
         agent_id: finalAgentId, 
         nodes: [], 
         edges: [] 
@@ -97,8 +113,13 @@ export async function createWorkflow(formData: FormData) {
 }
 
 // Add to app/actions/workflow.ts
-export async function saveWorkflowState(id: string, nodes: any[], edges: any[]) {
+export async function saveWorkflowState(id: string, nodes: WorkflowGraphItem[], edges: WorkflowGraphItem[]) {
   const supabase = createClient();
+  const currentUser = await getCurrentDbUserId();
+
+  if (!currentUser.userId) {
+    return { error: currentUser.error };
+  }
   
   const { error } = await supabase
     .from('workflows')
@@ -107,7 +128,8 @@ export async function saveWorkflowState(id: string, nodes: any[], edges: any[]) 
       edges, 
       updated_at: new Date().toISOString() 
     })
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', currentUser.userId);
 
   if (error) return { error: error.message };
   return { success: true };
@@ -115,11 +137,17 @@ export async function saveWorkflowState(id: string, nodes: any[], edges: any[]) 
 
 export async function getWorkflow(id: string) {
   const supabase = createClient();
+  const currentUser = await getCurrentDbUserId();
+
+  if (!currentUser.userId) {
+    return null;
+  }
   
   const { data, error } = await supabase
     .from('workflows')
     .select('*')
     .eq('id', id)
+    .eq('user_id', currentUser.userId)
     .single();
 
   if (error) {
@@ -132,10 +160,16 @@ export async function getWorkflow(id: string) {
 
 export async function getWorkflows() {
   const supabase = createClient();
+  const currentUser = await getCurrentDbUserId();
+
+  if (!currentUser.userId) {
+    return [];
+  }
 
   const { data, error } = await supabase
     .from("workflows")
     .select("*")
+    .eq("user_id", currentUser.userId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -148,11 +182,17 @@ export async function getWorkflows() {
 
 export async function deleteWorkflow(id: string) {
   const supabase = createClient();
+  const currentUser = await getCurrentDbUserId();
+
+  if (!currentUser.userId) {
+    return { error: currentUser.error };
+  }
 
   const { error } = await supabase
     .from("workflows")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("user_id", currentUser.userId);
 
   if (error) {
     return { error: error.message };

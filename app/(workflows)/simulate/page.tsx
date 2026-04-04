@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { getCurrentWorkflowUserId } from "@/app/actions/workflow";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
 
@@ -29,6 +30,21 @@ function getDownloadFileName(contentDisposition: string | null, fallback: string
   return fallback;
 }
 
+function getOutputValue(output: Record<string, unknown>, key: string) {
+  return output[key];
+}
+
+function getNestedOutputValue(output: Record<string, unknown>, key: string, nestedKey: string) {
+  const value = output[key];
+  if (!value || typeof value !== "object") return undefined;
+  return (value as Record<string, unknown>)[nestedKey];
+}
+
+function formatOutputValue(value: unknown) {
+  if (typeof value === "string" || typeof value === "number") return value;
+  return "-";
+}
+
 function SimulatePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -37,7 +53,8 @@ function SimulatePage() {
   // Form state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [targetLanguage, setTargetLanguage] = useState("hi");
-  const [userId, setUserId] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isLoadingUserId, setIsLoadingUserId] = useState(true);
 
   // Run state
   const [isRunning, setIsRunning] = useState(false);
@@ -53,13 +70,44 @@ function SimulatePage() {
     if (!workflowId) router.replace("/workflows");
   }, [workflowId, router]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadCurrentUserId() {
+      const result = await getCurrentWorkflowUserId();
+
+      if (!isMounted) return;
+
+      if (result.userId) {
+        setUserId(result.userId);
+        setRunError(null);
+      } else {
+        setUserId(null);
+        setRunError(result.error ?? "Could not load your user session.");
+      }
+
+      setIsLoadingUserId(false);
+    }
+
+    loadCurrentUserId();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const canSubmit =
-    Boolean(workflowId) && API_BASE_URL.length > 0 && selectedFile !== null;
+    Boolean(workflowId) &&
+    API_BASE_URL.length > 0 &&
+    selectedFile !== null &&
+    Boolean(userId) &&
+    !isLoadingUserId;
 
   const handleRun = async () => {
     if (!workflowId) return;
     if (!selectedFile) return setRunError("Please upload a document first.");
     if (!API_BASE_URL) return setRunError("NEXT_PUBLIC_API_URL is not configured.");
+    if (!userId) return setRunError("Could not load your user session.");
 
     setIsRunning(true);
     setRunError(null);
@@ -70,7 +118,7 @@ function SimulatePage() {
       const formData = new FormData();
       formData.append("file", selectedFile);
       formData.append("target_language", targetLanguage.trim() || "hi");
-      if (userId.trim()) formData.append("user_id", userId.trim());
+      formData.append("user_id", userId);
 
       const res = await fetch(
         `${API_BASE_URL}/workflow/${encodeURIComponent(workflowId)}/run`,
@@ -209,10 +257,10 @@ function SimulatePage() {
             )}
           </div>
 
-          {/* Language + User ID */}
+          {/* Language */}
           <div className="rounded-2xl border border-border-dark bg-[#111813] p-5 space-y-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 mb-2">
+              <label className="hidden">
                 Target language
               </label>
               <input
@@ -232,17 +280,18 @@ function SimulatePage() {
             <div>
               <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 mb-2">
                 User ID{" "}
-                <span className="normal-case tracking-normal font-normal text-slate-500 ml-1">
-                  (optional — for glossary)
-                </span>
               </label>
               <input
-                type="text"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                placeholder="37720c15-ff75-49eb-a538-b25fd2273d30"
-                className="w-full rounded-xl border border-border-dark bg-[#0A0F0C] px-3 py-2.5 text-sm text-white outline-none transition-colors focus:border-primary font-mono"
+                type="hidden"
+                value={userId ?? ""}
+                readOnly
+                className="hidden"
               />
+              <p className="text-xs text-slate-500">
+                {isLoadingUserId
+                  ? "Capturing your signed-in user session for glossary lookup..."
+                  : "Your signed-in user session will be used automatically for glossary lookup."}
+              </p>
             </div>
           </div>
 
@@ -329,9 +378,22 @@ function SimulatePage() {
                 {runResult.output && (
                   <div className="mt-4 grid grid-cols-3 gap-3">
                     {[
-                      { label: "Segments", value: runResult.output.segment_count as number },
-                      { label: "Input tokens", value: (runResult.output.token_usage as any)?.input },
-                      { label: "Output tokens", value: (runResult.output.token_usage as any)?.output },
+                      {
+                        label: "Segments",
+                        value: formatOutputValue(getOutputValue(runResult.output, "segment_count")),
+                      },
+                      {
+                        label: "Input tokens",
+                        value: formatOutputValue(
+                          getNestedOutputValue(runResult.output, "token_usage", "input"),
+                        ),
+                      },
+                      {
+                        label: "Output tokens",
+                        value: formatOutputValue(
+                          getNestedOutputValue(runResult.output, "token_usage", "output"),
+                        ),
+                      },
                     ].map(({ label, value }) => (
                       <div key={label} className="rounded-xl bg-[#0A0F0C] border border-border-dark p-3">
                         <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500">{label}</p>

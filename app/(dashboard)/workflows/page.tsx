@@ -9,32 +9,23 @@ import {
   deleteWorkflow,
 } from "@/app/actions/workflow";
 
-// // Mock data for existing workflows (We will make this dynamic next!)
-// const existingWorkflows = [
-//   {
-//     id: 1,
-//     title: "Patient Intake V2",
-//     description:
-//       "Collects initial patient details, verifies insurance, and routes to appropriate department.",
-//     status: "Running",
-//     lastUpdated: "2 hours ago",
-//     icon: "medical_services",
-//     iconColor: "text-blue-400",
-//     iconBg: "bg-blue-900/30",
-//   },
-//   // ... (Keep the rest of your mock data here)
-//   {
-//     id: 2,
-//     title: "Appointment Set",
-//     description:
-//       "Schedules routine checkups, sends confirmations, and syncs directly with EHR calendar.",
-//     status: "Draft",
-//     lastUpdated: "1 day ago",
-//     icon: "calendar_month",
-//     iconColor: "text-orange-400",
-//     iconBg: "bg-orange-900/30",
-//   },
-// ];
+type WorkflowCard = {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  lastUpdated: string;
+  icon: string;
+  iconColor: string;
+  iconBg: string;
+};
+
+type WorkflowRecord = {
+  id: string;
+  name: string;
+  description: string | null;
+  updated_at: string;
+};
 
 export default function Workflows() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,7 +34,7 @@ export default function Workflows() {
   const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
   const [agentSelection, setAgentSelection] = useState("new");
   const [authType, setAuthType] = useState("none");
-  const [workflows, setWorkflows] = useState<any[]>([]);
+  const [workflows, setWorkflows] = useState<WorkflowCard[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -83,7 +74,7 @@ export default function Workflows() {
     getWorkflows().then((data) => {
       if (!data) return;
 
-      const formatted = data.map((w: any) => ({
+      const formatted = data.map((w: WorkflowRecord) => ({
         id: w.id,
         title: w.name,
         description: w.description || "No description provided.",
