@@ -2,13 +2,15 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface HeaderProps {
   leftOpen: boolean;
   setLeftOpen: (v: boolean) => void;
   rightOpen: boolean;
   setRightOpen: (v: boolean) => void;
-  workflowName: string; // <-- Added this new prop
+  workflowName: string;
+  workflowId: string | null;
 }
 
 export function WorkflowHeader({ 
@@ -16,12 +18,19 @@ export function WorkflowHeader({
   setLeftOpen, 
   rightOpen, 
   setRightOpen, 
-  workflowName 
+  workflowName,
+  workflowId,
 }: HeaderProps) {
+  const router = useRouter();
+
+  const handleSimulate = () => {
+    if (!workflowId) return;
+    router.push(`/simulate?workflow_id=${encodeURIComponent(workflowId)}`);
+  };
+
   return (
     <header className="flex items-center justify-between px-4 py-3 border-b border-border-dark bg-[#111813] z-20">
       
-      {/* LEFT: Save & Exit + Left Sidebar Toggle */}
       <div className="flex items-center gap-3 w-1/3">
         <Link 
           href="/workflows" 
@@ -31,7 +40,7 @@ export function WorkflowHeader({
           Save & Exit
         </Link>
         
-        <div className="w-px h-6 bg-border-dark mx-2"></div>
+        <div className="w-px h-6 bg-border-dark mx-2" />
 
         <button
           onClick={() => setLeftOpen(!leftOpen)}
@@ -46,10 +55,8 @@ export function WorkflowHeader({
         </button>
       </div>
 
-      {/* CENTER: Title */}
       <div className="flex flex-col items-center justify-center w-1/3">
         <div className="flex items-center gap-2">
-          {/* Dynamically render the workflow name here with a fallback */}
           <h2 className="text-lg font-bold text-white tracking-tight">
             {workflowName || "Loading..."}
           </h2>
@@ -59,14 +66,17 @@ export function WorkflowHeader({
         </div>
       </div>
 
-      {/* RIGHT: Actions + Right Sidebar Toggle */}
       <div className="flex items-center justify-end gap-3 w-1/3">
-        <button className="flex items-center gap-2 px-4 py-1.5 text-sm font-bold text-[#111813] bg-primary rounded-lg hover:bg-[#0e9f6e] transition-colors">
+        <button
+          onClick={handleSimulate}
+          disabled={!workflowId}
+          className="flex items-center gap-2 px-4 py-1.5 text-sm font-bold text-[#111813] bg-primary rounded-lg hover:bg-[#0e9f6e] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
           <span className="material-symbols-outlined text-[18px]">play_arrow</span>
           Simulate
         </button>
 
-        <div className="w-px h-6 bg-border-dark mx-2"></div>
+        <div className="w-px h-6 bg-border-dark mx-2" />
 
         <button
           onClick={() => setRightOpen(!rightOpen)}
