@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getCurrentWorkflowUserId } from "@/app/actions/workflow";
+import { getCurrentWorkflowUserId, getWorkflow } from "@/app/actions/workflow";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
 
@@ -19,6 +19,24 @@ type WorkflowRunResponse = {
     error?: string;
   }>;
   cache_hit?: boolean;
+};
+
+type WorkflowMeta = {
+  auth_type?: string | null;
+  auth_token?: string | null;
+};
+
+type ApiLinkItem = {
+  method: "GET" | "POST" | "DELETE";
+  path: string;
+  label: string;
+  group: "workflow" | "glossary";
+};
+
+const methodClassNames: Record<ApiLinkItem["method"], string> = {
+  GET: "border-sky-500/40 bg-sky-500/10 text-sky-200",
+  POST: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
+  DELETE: "border-red-500/40 bg-red-500/10 text-red-200",
 };
 
 function getDownloadFileName(contentDisposition: string | null, fallback: string) {
@@ -64,6 +82,8 @@ function SimulatePage() {
   // Download state
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [workflowMeta, setWorkflowMeta] = useState<WorkflowMeta | null>(null);
+  const [copiedToken, setCopiedToken] = useState(false);
 
   // Redirect if no workflow_id
   useEffect(() => {
@@ -95,6 +115,29 @@ function SimulatePage() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!workflowId) return;
+    const currentWorkflowId = workflowId;
+
+    let isMounted = true;
+
+    async function loadWorkflowMeta() {
+      const workflow = await getWorkflow(currentWorkflowId);
+      if (!isMounted || !workflow) return;
+
+      setWorkflowMeta({
+        auth_type: typeof workflow.auth_type === "string" ? workflow.auth_type : null,
+        auth_token: typeof workflow.auth_token === "string" ? workflow.auth_token : null,
+      });
+    }
+
+    loadWorkflowMeta();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [workflowId]);
 
   const canSubmit =
     Boolean(workflowId) &&
@@ -174,7 +217,74 @@ function SimulatePage() {
     }
   };
 
+  const handleCopyAuthToken = async () => {
+    if (!workflowMeta?.auth_token) return;
+
+    try {
+      await navigator.clipboard.writeText(workflowMeta.auth_token);
+      setCopiedToken(true);
+      window.setTimeout(() => setCopiedToken(false), 2000);
+    } catch {
+      setRunError("Failed to copy auth token.");
+    }
+  };
+
   if (!workflowId) return null;
+
+  const backendDocsUrl = API_BASE_URL ? `${API_BASE_URL}/backend_urls` : "";
+  const workflowPathId = workflowId || "{workflow_id}";
+  const executionPathId = runResult?.execution_id || "{execution_id}";
+  const glossaryUserId = userId || "{user_id}";
+  const apiLinks: ApiLinkItem[] = [
+    {
+      method: "GET",
+      path: `/workflow/user/${glossaryUserId}`,
+      label: "List User Workflows",
+      group: "workflow",
+    },
+    {
+      method: "POST",
+      path: `/workflow/${workflowPathId}/run`,
+      label: "Run Workflow",
+      group: "workflow",
+    },
+    {
+      method: "GET",
+      path: `/workflow/${workflowPathId}/execution/${executionPathId}/segments`,
+      label: "Get Execution Segments",
+      group: "workflow",
+    },
+    {
+      method: "POST",
+      path: `/workflow/${workflowPathId}/execution/${executionPathId}/retranslate`,
+      label: "Retranslate Workflow",
+      group: "workflow",
+    },
+    {
+      method: "GET",
+      path: `/workflow/${workflowPathId}/execution/${executionPathId}/download`,
+      label: "Download Translated Document",
+      group: "workflow",
+    },
+    {
+      method: "POST",
+      path: `/glossary/${glossaryUserId}/terms`,
+      label: "Add Term",
+      group: "glossary",
+    },
+    {
+      method: "GET",
+      path: `/glossary/${glossaryUserId}/terms`,
+      label: "List Terms",
+      group: "glossary",
+    },
+    {
+      method: "DELETE",
+      path: `/glossary/${glossaryUserId}/terms/{term_id}`,
+      label: "Delete Term",
+      group: "glossary",
+    },
+  ];
 
   const successLogs = runResult?.logs.filter((l) => l.status === "success") ?? [];
   const errorLogs = runResult?.logs.filter((l) => l.status === "error") ?? [];
@@ -260,7 +370,7 @@ function SimulatePage() {
           {/* Language */}
           <div className="rounded-2xl border border-border-dark bg-[#111813] p-5 space-y-4">
             <div>
-              <label className="hidden">
+              <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 mb-2">
                 Target language
               </label>
               <input
@@ -278,8 +388,8 @@ function SimulatePage() {
             <div className="h-px bg-border-dark" />
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 mb-2">
-                User ID{" "}
+              <label className="hidden">
+                Session user
               </label>
               <input
                 type="hidden"
@@ -341,6 +451,93 @@ function SimulatePage() {
             <p className="mt-1 text-sm text-slate-400">
               Execution output and per-node logs appear here after a run.
             </p>
+          </div>
+
+          <div className="rounded-2xl border border-border-dark bg-[#111813] p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">
+                  API Links
+                </p>
+                <p className="mt-1 text-sm text-slate-400">
+                  Backend routes generated from `NEXT_PUBLIC_API_URL/backend_urls`.
+                </p>
+              </div>
+              {backendDocsUrl && (
+                <a
+                  href={backendDocsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-xl border border-border-dark bg-[#0A0F0C] px-3 py-2 text-xs font-semibold text-white transition-colors hover:border-primary/40 hover:bg-[#162019]"
+                >
+                  <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                  Open Backend URLs
+                </a>
+              )}
+            </div>
+
+            {workflowMeta?.auth_type === "api_key" && workflowMeta.auth_token && (
+              <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-amber-200">
+                      Auth Token
+                    </p>
+                    <p className="mt-2 break-all font-mono text-xs text-amber-50">
+                      {workflowMeta.auth_token}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyAuthToken}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-amber-400/20 bg-black/20 px-3 py-1.5 text-xs font-semibold text-amber-100 transition-colors hover:bg-black/30"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">
+                      {copiedToken ? "check" : "content_copy"}
+                    </span>
+                    {copiedToken ? "Copied" : "Copy"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 space-y-4">
+              {(["workflow", "glossary"] as const).map((group) => (
+                <div key={group}>
+                  <h3 className="text-lg font-semibold capitalize text-white">{group}</h3>
+                  <div className="mt-3 space-y-2">
+                    {apiLinks
+                      .filter((link) => link.group === group)
+                      .map((link) => (
+                        <a
+                          key={`${group}-${link.method}-${link.path}`}
+                          href={API_BASE_URL ? `${API_BASE_URL}${link.path}` : "#"}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center justify-between gap-3 rounded-xl border border-border-dark bg-[#0A0F0C] px-4 py-3 transition-colors hover:border-primary/30 hover:bg-[#121a15]"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span
+                                className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide ${methodClassNames[link.method]}`}
+                              >
+                                {link.method}
+                              </span>
+                              <code className="break-all text-xs text-slate-200">
+                                {link.path}
+                              </code>
+                            </div>
+                            <p className="mt-1 text-sm text-slate-400">{link.label}</p>
+                          </div>
+                          <span className="material-symbols-outlined text-slate-500">
+                            open_in_new
+                          </span>
+                        </a>
+                      ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {!runResult ? (
