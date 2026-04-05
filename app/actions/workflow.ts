@@ -60,6 +60,8 @@ export async function createWorkflow(formData: FormData) {
   // Extract Workflow Details
   const workflowName = formData.get('workflowName') as string
   const workflowDescription = formData.get('workflowDescription') as string
+  const workflowAuthType = formData.get('workflowAuthType') as string
+  const workflowAuthToken = formData.get('workflowAuthToken') as string
   
   // Extract Agent Details
   const agentSelection = formData.get('agentSelection') as string
@@ -98,6 +100,8 @@ export async function createWorkflow(formData: FormData) {
     .insert([{ 
         name: workflowName,
         description: workflowDescription,
+        auth_type: workflowAuthType || 'none',
+        auth_token: workflowAuthType === 'api_key' ? workflowAuthToken : null,
         user_id: currentUser.userId,
         agent_id: finalAgentId, 
         nodes: [], 

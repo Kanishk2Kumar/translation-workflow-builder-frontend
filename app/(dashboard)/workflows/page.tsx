@@ -27,13 +27,25 @@ type WorkflowRecord = {
   updated_at: string;
 };
 
+function generateWorkflowAuthToken() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = new Uint8Array(30);
+  crypto.getRandomValues(bytes);
+
+  const tokenBody = Array.from(bytes, (byte) => chars[byte % chars.length]).join("");
+  return `tl-${tokenBody}`;
+}
+
 export default function Workflows() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
   const [agentSelection, setAgentSelection] = useState("new");
-  const [authType, setAuthType] = useState("none");
+  const [agentAuthType, setAgentAuthType] = useState("none");
+  const [workflowAuthType, setWorkflowAuthType] = useState("none");
+  const [workflowAuthToken, setWorkflowAuthToken] = useState("");
+  const [copiedWorkflowToken, setCopiedWorkflowToken] = useState(false);
   const [workflows, setWorkflows] = useState<WorkflowCard[]>([]);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
@@ -45,6 +57,35 @@ export default function Workflows() {
       });
     }
   }, [isModalOpen]);
+
+  function handleWorkflowAuthTypeChange(value: string) {
+    setWorkflowAuthType(value);
+
+    if (value === "api_key") {
+      setWorkflowAuthToken((currentToken) => currentToken || generateWorkflowAuthToken());
+      return;
+    }
+
+    setWorkflowAuthToken("");
+    setCopiedWorkflowToken(false);
+  }
+
+  function handleGenerateWorkflowToken() {
+    setWorkflowAuthToken(generateWorkflowAuthToken());
+    setCopiedWorkflowToken(false);
+  }
+
+  async function handleCopyWorkflowToken() {
+    if (!workflowAuthToken) return;
+
+    try {
+      await navigator.clipboard.writeText(workflowAuthToken);
+      setCopiedWorkflowToken(true);
+      window.setTimeout(() => setCopiedWorkflowToken(false), 2000);
+    } catch {
+      setError("Failed to copy workflow auth token.");
+    }
+  }
 
   // Wrapper for the server action to handle loading & errors
   async function handleCreate(formData: FormData) {
@@ -157,6 +198,75 @@ export default function Workflows() {
                     className="w-full bg-surface-dark border border-border-dark rounded-lg p-3 text-sm text-gray-700 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none"
                   ></textarea>
                 </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="workflowAuthType"
+                    className="text-sm font-semibold text-slate-300"
+                  >
+                    Workflow Auth Type
+                  </label>
+                  <select
+                    id="workflowAuthType"
+                    name="workflowAuthType"
+                    value={workflowAuthType}
+                    onChange={(e) => handleWorkflowAuthTypeChange(e.target.value)}
+                    className="w-full bg-surface-dark border border-border-dark rounded-lg p-3 text-sm text-gray-800 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none cursor-pointer"
+                  >
+                    <option value="none">None</option>
+                    <option value="api_key">API Key</option>
+                  </select>
+                </div>
+
+                {workflowAuthType === "api_key" && (
+                  <div className="rounded-xl border border-amber-500/20 bg-[#162e1e]/40 p-4 space-y-3 animate-in fade-in slide-in-from-top-2">
+                    <input
+                      type="hidden"
+                      name="workflowAuthToken"
+                      value={workflowAuthToken}
+                      readOnly
+                    />
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="workflowAuthTokenDisplay"
+                        className="text-xs font-semibold text-slate-400"
+                      >
+                        Auth Token
+                      </label>
+                      <input
+                        id="workflowAuthTokenDisplay"
+                        type="text"
+                        value={workflowAuthToken}
+                        readOnly
+                        className="w-full bg-[#111813] border border-border-dark rounded-md p-2.5 text-sm text-gray-300 outline-none font-mono"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleGenerateWorkflowToken}
+                        className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-bold text-[#111813] transition-colors hover:bg-[#0e9f6e]"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">autorenew</span>
+                        Generate
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCopyWorkflowToken}
+                        disabled={!workflowAuthToken}
+                        className="inline-flex items-center gap-2 rounded-md border border-border-dark bg-[#111813] px-3 py-2 text-xs font-bold text-slate-200 transition-colors hover:bg-[#1b241e] disabled:opacity-50"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">
+                          {copiedWorkflowToken ? "check" : "content_copy"}
+                        </span>
+                        {copiedWorkflowToken ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Example: `tl-9f3aKx7LpQ2vR8mN1bZ4cD6eH0yTgW`
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* --- AGENT DETAILS --- */}
@@ -241,8 +351,8 @@ export default function Workflows() {
                         <select
                           id="authType"
                           name="authType"
-                          value={authType}
-                          onChange={(e) => setAuthType(e.target.value)}
+                          value={agentAuthType}
+                          onChange={(e) => setAgentAuthType(e.target.value)}
                           className="w-full bg-[#111813] border border-border-dark rounded-md p-2.5 text-sm text-gray-500 outline-none focus:border-primary appearance-none cursor-pointer"
                         >
                           <option value="none">None (Public)</option>
@@ -250,7 +360,7 @@ export default function Workflows() {
                         </select>
                       </div>
 
-                      {authType === "bearer" && (
+                      {agentAuthType === "bearer" && (
                         <div className="space-y-2 animate-in fade-in zoom-in-95">
                           <label
                             htmlFor="authToken"
@@ -262,7 +372,7 @@ export default function Workflows() {
                             id="authToken"
                             name="authToken"
                             type="password"
-                            required={authType === "bearer"}
+                            required={agentAuthType === "bearer"}
                             placeholder="sk-..."
                             className="w-full bg-[#111813] border border-border-dark rounded-md p-2.5 text-sm text-gray-500 outline-none focus:border-primary transition-all"
                           />
