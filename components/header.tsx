@@ -21,7 +21,7 @@ const Header = () => {
             </div>
           </div>
           <span className="text-lg font-bold tracking-tight text-white">
-            VoiceMed AI
+            Translatio
           </span>
         </Link>
         <nav className="hidden md:flex items-center gap-8">

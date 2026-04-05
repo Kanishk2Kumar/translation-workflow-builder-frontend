@@ -28,7 +28,7 @@ const Footer = () => {
                 </svg>
               </div>
               <span className="text-md font-bold text-text-main font-display">
-                VoiceMed AI
+                Translatio
               </span>
             </div>
             <p className="text-sm leading-6 text-text-secondary">
@@ -228,7 +228,7 @@ const Footer = () => {
         <div className="mt-16 border-t border-border-dark py-8 sm:mt-20 lg:mt-24 relative z-10">
           <div className="mx-auto flex max-w-300 flex-col items-center justify-between gap-4 px-6 lg:flex-row lg:px-8">
             <p className="text-xs leading-5 text-gray-500">
-              © 2026 VoiceMed AI Inc. All rights reserved.
+              © 2026 Translatio Inc. All rights reserved.
             </p>
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>

@@ -8,7 +8,7 @@ export default function Home() {
 
           <main className="flex-1">
             {/* Hero Section */}
-            <section className="relative isolate pt-14 lg:pt-20 pb-20 overflow-hidden">
+            <section className="relative isolate pt-14 lg:pt-16 pb-20 overflow-hidden">
               {/* Abstract Background Gradient */}
               <div
                 aria-hidden="true"
@@ -25,8 +25,8 @@ export default function Home() {
                     </span>
                   </div>
                   <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
-                    Automate Patient Interactions with{" "}
-                    <span className="text-primary">Voice AI</span>
+                    Enterprise level translation workflows, tailored for {" "}
+                    <span className="text-primary">Healthcare Needs</span>
                   </h1>
                   <p className="mt-6 text-lg leading-8 text-text-muted">
                     Streamline hospital workflows, reduce staff burnout, and
@@ -376,7 +376,7 @@ export default function Home() {
                       Ready to modernize your patient communication?
                     </h2>
                     <p className="mt-4 text-lg leading-8 text-text-muted">
-                      Join over 500+ healthcare providers using VoiceMed AI to
+                      Join over 500+ healthcare providers using Translatio to
                       deliver better care at scale.
                     </p>
                     <div className="mt-6 flex max-w-md gap-x-4">
@@ -425,7 +425,7 @@ export default function Home() {
                         </div>
                         <div>
                           <p className="text-lg font-medium text-white italic">
-                            "VoiceMed AI has transformed our front desk
+                            "Translatio has transformed our front desk
                             operations. We've seen a 40% drop in missed calls
                             and our patients love the instant responses."
                           </p>
@@ -474,7 +474,7 @@ export default function Home() {
                   </div>
                 </div>
                     <span className="text-md font-bold text-white">
-                      VoiceMed AI
+                      Translatio
                     </span>
                   </div>
                   <p className="text-sm leading-6 text-text-muted">
@@ -668,7 +668,7 @@ export default function Home() {
               <div className="mt-16 border-t border-border-dark py-8 sm:mt-20 lg:mt-24">
                 <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 lg:flex-row lg:px-8">
                   <p className="text-xs leading-5 text-gray-500">
-                    © 2024 VoiceMed AI Inc. All rights reserved.
+                    © 2024 Translatio Inc. All rights reserved.
                   </p>
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full bg-green-500"></div>

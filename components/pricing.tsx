@@ -19,7 +19,7 @@ export default function Pricing() {
             Pricing that Scales with You
           </h1>
           <p>
-            VoiceMed AI enables hospitals and healthcare providers to build
+            Translatio enables hospitals and healthcare providers to build
             AI-powered voice agents and communication systems with built-in
             compliance and real-time intelligence.
           </p>

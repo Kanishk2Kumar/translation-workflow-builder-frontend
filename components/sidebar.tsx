@@ -41,7 +41,7 @@ export function Sidebar() {
         </div>
         <div className="flex flex-col">
           <h1 className="text-white text-base font-bold leading-none">
-            VoiceMed AI
+            Translatio
           </h1>
           <p className="text-[#9db9a6] text-xs font-normal mt-1">
             Admin Panel
