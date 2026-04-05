@@ -25,7 +25,7 @@ const notoSans = Noto_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "VoiceMedAI",
+  title: "Translatio",
   description: "Voice AI Assistant Specialized for HealthCare",
 };
 
@@ -42,7 +42,7 @@ export default function RootLayout({
         <div>
         <meta charSet="utf-8" />
         <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-        <title>VoiceMed AI - Healthcare Automation</title>
+        <title>Translatio - Healthcare Automation</title>
 
         {/* Tailwind CSS */}
         <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>

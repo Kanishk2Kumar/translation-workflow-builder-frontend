@@ -273,7 +273,7 @@ const SecurityPage = () => {
                   Secure your patient communication today
                 </h2>
                 <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-gray-400 relative z-10">
-                  Join leading healthcare providers who trust VoiceMed AI with
+                  Join leading healthcare providers who trust Translatio with
                   their most sensitive workflows.
                 </p>
                 <div className="mt-10 flex items-center justify-center gap-x-6 relative z-10">
